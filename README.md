@@ -1,5 +1,5 @@
-# QGroundControl Ground Control Station
-## Open Source Micro Air Vehicle Ground Control Station
+# Fork de QGroundControl
+## Universidad Tecnológica Nacional - Facultad Regional Buenos Aires
 
 [![Releases](https://img.shields.io/github/release/mavlink/QGroundControl.svg)](https://github.com/mavlink/QGroundControl/releases)
 [![Travis Build Status](https://travis-ci.org/mavlink/qgroundcontrol.svg?branch=master)](https://travis-ci.org/mavlink/qgroundcontrol)
