@@ -219,6 +219,7 @@ INCLUDEPATH += \
 FORMS += \
     src/ui/MainWindow.ui \
     src/QGCQmlWidgetHolder.ui \
+    src/ui/prueba/pruebacomunicacion.ui
 
 !MobileBuild {
 FORMS += \
@@ -306,7 +307,8 @@ HEADERS += \
     src/AutoPilotPlugins/APM/APMAirframeLoader.h \
     src/QmlControls/QGCImageProvider.h \
     src/QtLocationPlugin/QMLControl/QGCMapEngineManager.h \
-    src/PositionManager/PositionManager.h
+    src/PositionManager/PositionManager.h \
+    src/ui/prueba/pruebacomunicacion.h
 
 AndroidBuild {
 HEADERS += \
@@ -463,7 +465,8 @@ SOURCES += \
     src/QmlControls/QGCImageProvider.cc \
     src/QtLocationPlugin/QMLControl/QGCMapEngineManager.cc \
     src/PositionManager/SimulatedPosition.cc \
-    src/PositionManager/PositionManager.cpp
+    src/PositionManager/PositionManager.cpp \
+    src/ui/prueba/pruebacomunicacion.cpp
 
 DebugBuild {
 SOURCES += \

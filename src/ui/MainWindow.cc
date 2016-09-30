@@ -54,6 +54,7 @@
 #include "HILDockWidget.h"
 #include "LogDownload.h"
 #include "AppMessages.h"
+#include "prueba/pruebacomunicacion.h"
 #endif
 
 #ifndef __ios__
@@ -76,7 +77,8 @@ enum DockWidgetTypes {
     INFO_VIEW,
     HIL_CONFIG,
     ANALYZE,
-    LOG_DOWNLOAD
+    LOG_DOWNLOAD,
+    PRUEBA_MENSAJE
 };
 
 static const char *rgDockWidgetNames[] = {
@@ -87,7 +89,8 @@ static const char *rgDockWidgetNames[] = {
     "Info View",
     "HIL Config",
     "Analyze",
-    "Log Download"
+    "Log Download",
+    "Prueba de mensaje"
 };
 
 #define ARRAY_SIZE(ARRAY) (sizeof(ARRAY) / sizeof(ARRAY[0]))
@@ -368,7 +371,11 @@ bool MainWindow::_createInnerDockWidget(const QString& widgetName)
                 widget = new Linecharts(widgetName, action, mavlinkDecoder, this);
                 break;
             case INFO_VIEW:
-                widget= new QGCTabbedInfoView(widgetName, action, this);
+                widget = new QGCTabbedInfoView(widgetName, action, this);
+                break;
+            // Acá agregué el código para crear nuestro widget de prueba
+            case PRUEBA_MENSAJE:
+                widget = new PruebaComunicacion(widgetName, action, this);
                 break;
         }
         if(action->data().toInt() == INFO_VIEW) {
