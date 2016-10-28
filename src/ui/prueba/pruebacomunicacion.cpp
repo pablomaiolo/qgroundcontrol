@@ -25,6 +25,15 @@ void PruebaComunicacion::on_cambiarAlturaButton_clicked()
     QGCApplication *app = qgcApp();
     Vehicle *vehiculoActivo = app->toolbox()->multiVehicleManager()->activeVehicle();
 
+    if(vehiculoActivo == NULL)
+    {
+        QMessageBox msgBox;
+        msgBox.setText("No hay un vehículo activo.");
+        msgBox.setIcon(QMessageBox::Information);
+        msgBox.exec();
+        return;
+    }
+
     if(vehiculoActivo->flying())
     {
         vehiculoActivo->guidedModeChangeAltitude(ui->alturaLineEdit->text().toDouble());
@@ -42,6 +51,15 @@ void PruebaComunicacion::on_aterrizarButton_clicked()
 {
     QGCApplication *app = qgcApp();
     Vehicle *vehiculoActivo = app->toolbox()->multiVehicleManager()->activeVehicle();
+
+    if(vehiculoActivo == NULL)
+    {
+        QMessageBox msgBox;
+        msgBox.setText("No hay un vehículo activo.");
+        msgBox.setIcon(QMessageBox::Information);
+        msgBox.exec();
+        return;
+    }
 
     if(vehiculoActivo->flying())
     {
