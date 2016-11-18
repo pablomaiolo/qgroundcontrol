@@ -57,6 +57,10 @@
 #define BUFFER_LENGTH 2041 // minimum buffer size that can be used with qnx (I don't know why)
 
 uint64_t microsSinceEpoch();
+void setearModo(const mavlink_message_t *msg);
+
+uint8_t     _mavBaseMode;
+uint32_t    _mavCustomMode;
 
 int main(int argc, char* argv[])
 {
@@ -179,6 +183,16 @@ int main(int argc, char* argv[])
                                     {
                                             // Packet received
                                             printf("\nReceived packet: SYS: %d, COMP: %d, LEN: %d, MSG ID: %d\n", msg.sysid, msg.compid, msg.len, msg.msgid);
+                                            
+                                            switch(msg.msgid)
+                                            {
+                                                case MAVLINK_MSG_ID_SET_MODE:
+                                                    setearModo(&msg);
+                                                    break;
+                                                    
+                                                default:
+                                                    break;
+                                            }
                                     }
                             }
                             printf("\n");
@@ -216,6 +230,15 @@ int main(int argc, char* argv[])
                 ticks++;
                 usleep((1.0/60)*1e6);   // Duerme 1/60 segundos
         }
+}
+
+void setearModo(const mavlink_message_t *msg)
+{
+    mavlink_set_mode_t request;
+    mavlink_msg_set_mode_decode(msg, &request);
+
+    _mavBaseMode = request.base_mode;
+    _mavCustomMode = request.custom_mode;
 }
 
 
