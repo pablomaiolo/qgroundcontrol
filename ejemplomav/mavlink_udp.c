@@ -58,9 +58,13 @@
 
 uint64_t microsSinceEpoch();
 void setearModo(const mavlink_message_t *msg);
+void handleCommandLong(const mavlink_message_t *msg);
 
-uint8_t     _mavBaseMode;
-uint32_t    _mavCustomMode;
+uint8_t     _mavBaseMode = MAV_MODE_AUTO_DISARMED;
+uint32_t    _mavCustomMode = 0;
+
+struct sockaddr_in gcAddr;
+int sock;
 
 int main(int argc, char* argv[])
 {
@@ -71,8 +75,7 @@ int main(int argc, char* argv[])
 	char target_ip[100];
 	
 	float position[6] = {};
-	int sock = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
-	struct sockaddr_in gcAddr; 
+	sock = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
 	struct sockaddr_in locAddr;
 	//struct sockaddr_in fromAddr;
 	uint8_t buf[BUFFER_LENGTH];
@@ -144,7 +147,7 @@ int main(int argc, char* argv[])
                     ticks = 0;
 		
                     /*Send Heartbeat */
-                    mavlink_msg_heartbeat_pack(1, 200, &msg, MAV_TYPE_HELICOPTER, MAV_AUTOPILOT_GENERIC, MAV_MODE_GUIDED_ARMED, 0, MAV_STATE_ACTIVE);
+                    mavlink_msg_heartbeat_pack(1, 200, &msg, MAV_TYPE_HELICOPTER, MAV_AUTOPILOT_GENERIC, _mavBaseMode, 0, MAV_STATE_STANDBY);
                     len = mavlink_msg_to_send_buffer(buf, &msg);
                     bytes_sent = sendto(sock, buf, len, 0, (struct sockaddr*)&gcAddr, sizeof(struct sockaddr_in));
                     
@@ -189,6 +192,9 @@ int main(int argc, char* argv[])
                                                 case MAVLINK_MSG_ID_SET_MODE:
                                                     setearModo(&msg);
                                                     break;
+                                                    
+                                                case MAVLINK_MSG_ID_COMMAND_LONG:
+                                                    handleCommandLong(&msg);
                                                     
                                                 default:
                                                     break;
@@ -241,6 +247,48 @@ void setearModo(const mavlink_message_t *msg)
     _mavCustomMode = request.custom_mode;
 }
 
+void handleCommandLong(const mavlink_message_t *msg)
+{
+    mavlink_command_long_t request;
+    uint8_t commandResult = MAV_RESULT_UNSUPPORTED;
+    mavlink_message_t commandAck;
+    uint16_t len;
+    uint8_t buf[BUFFER_LENGTH];
+    int bytes_sent;
+
+    mavlink_msg_command_long_decode(msg, &request);
+
+    switch (request.command) {
+    case MAV_CMD_COMPONENT_ARM_DISARM:
+        if (request.param1 == 0.0f) {
+            _mavBaseMode &= ~MAV_MODE_FLAG_SAFETY_ARMED;
+        } else {
+            _mavBaseMode |= MAV_MODE_FLAG_SAFETY_ARMED;
+        }
+        commandResult = MAV_RESULT_ACCEPTED;
+        break;
+    /*case MAV_CMD_PREFLIGHT_CALIBRATION:
+        _handlePreFlightCalibration(request);
+        commandResult = MAV_RESULT_ACCEPTED;
+        break;
+    case MAV_CMD_PREFLIGHT_STORAGE:
+        commandResult = MAV_RESULT_ACCEPTED;
+        break;
+    case MAV_CMD_REQUEST_AUTOPILOT_CAPABILITIES:
+        commandResult = MAV_RESULT_ACCEPTED;
+        _respondWithAutopilotVersion();
+        break;*/
+    }
+
+    mavlink_msg_command_ack_pack(1,
+                                 200,
+                                 &commandAck,
+                                 request.command,
+                                 commandResult);
+    
+    len = mavlink_msg_to_send_buffer(buf, &commandAck);
+    bytes_sent = sendto(sock, buf, len, 0, (struct sockaddr*)&gcAddr, sizeof (struct sockaddr_in));
+}
 
 /* QNX timer version */
 #if (defined __QNX__) | (defined __QNXNTO__)
