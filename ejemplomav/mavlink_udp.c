@@ -59,12 +59,15 @@
 uint64_t microsSinceEpoch();
 void setearModo(const mavlink_message_t *msg);
 void handleCommandLong(const mavlink_message_t *msg);
+void respondWithAutopilotVersion(void);
 
 uint8_t     _mavBaseMode = MAV_MODE_AUTO_DISARMED;
 uint32_t    _mavCustomMode = 0;
 
 struct sockaddr_in gcAddr;
 int sock;
+
+MAV_AUTOPILOT _firmwareType = MAV_AUTOPILOT_GENERIC;
 
 int main(int argc, char* argv[])
 {
@@ -206,31 +209,34 @@ int main(int argc, char* argv[])
                     memset(buf, 0, BUFFER_LENGTH);
                 }
                 
-                /* Enviamos información del GPS 60 veces por segundo */
-                mavlink_msg_gps_raw_int_pack(1,
-                                200,
-                                &msg,
-                                microsSinceEpoch(),                            // time since boot
-                                3,                                     // 3D fix
-                                (int32_t)((-34.5 + 0.001*sin(param))  * 1E7),
-                                (int32_t)((-58.5 + 0.001*cos(param)) * 1E7),
-                                (int32_t)(20  * 1000),
-                                UINT16_MAX, UINT16_MAX,                // HDOP/VDOP not known
-                                UINT16_MAX,                            // velocity not known
-                                UINT16_MAX,                            // course over ground not known
-                                8);                                    // satellite count
-                len = mavlink_msg_to_send_buffer(buf, &msg);
-                bytes_sent = sendto(sock, buf, len, 0, (struct sockaddr*)&gcAddr, sizeof(struct sockaddr_in));
-                
-                /* Send attitude */
-                mavlink_msg_attitude_pack(1, 200, &msg, microsSinceEpoch(), 0.0, 0.0, -param, 0.01, 0.02, 0.03);
-                len = mavlink_msg_to_send_buffer(buf, &msg);
-                bytes_sent = sendto(sock, buf, len, 0, (struct sockaddr*)&gcAddr, sizeof(struct sockaddr_in));
-                
-                param += 2*M_PI/600;    // Trayectoria circular de período de 10 segundos
-                
-                if(param > 2*M_PI)
-                    param -= 2*M_PI;
+                /* Enviamos información del GPS 60 veces por segundo, solamente si está armed */
+		if(_mavBaseMode & MAV_MODE_FLAG_SAFETY_ARMED)
+		{
+		    mavlink_msg_gps_raw_int_pack(1,
+				    200,
+				    &msg,
+				    microsSinceEpoch(),                            // time since boot
+				    3,                                     // 3D fix
+				    (int32_t)((-34.5 + 0.001*sin(param))  * 1E7),
+				    (int32_t)((-58.5 + 0.001*cos(param)) * 1E7),
+				    (int32_t)(20  * 1000),
+				    UINT16_MAX, UINT16_MAX,                // HDOP/VDOP not known
+				    UINT16_MAX,                            // velocity not known
+				    UINT16_MAX,                            // course over ground not known
+				    8);                                    // satellite count
+		    len = mavlink_msg_to_send_buffer(buf, &msg);
+		    bytes_sent = sendto(sock, buf, len, 0, (struct sockaddr*)&gcAddr, sizeof(struct sockaddr_in));
+		    
+		    /* Send attitude */
+		    mavlink_msg_attitude_pack(1, 200, &msg, microsSinceEpoch(), 0.0, 0.0, -param, 0.01, 0.02, 0.03);
+		    len = mavlink_msg_to_send_buffer(buf, &msg);
+		    bytes_sent = sendto(sock, buf, len, 0, (struct sockaddr*)&gcAddr, sizeof(struct sockaddr_in));
+		    
+		    param += 2*M_PI/600;    // Trayectoria circular de período de 10 segundos
+		    
+		    if(param > 2*M_PI)
+			param -= 2*M_PI;
+		}
                 
 		//sleep(1); // Sleep one second
                 ticks++;
@@ -267,8 +273,8 @@ void handleCommandLong(const mavlink_message_t *msg)
         }
         commandResult = MAV_RESULT_ACCEPTED;
         break;
-    /*case MAV_CMD_PREFLIGHT_CALIBRATION:
-        _handlePreFlightCalibration(request);
+    case MAV_CMD_PREFLIGHT_CALIBRATION:
+        //_handlePreFlightCalibration(request);
         commandResult = MAV_RESULT_ACCEPTED;
         break;
     case MAV_CMD_PREFLIGHT_STORAGE:
@@ -276,8 +282,8 @@ void handleCommandLong(const mavlink_message_t *msg)
         break;
     case MAV_CMD_REQUEST_AUTOPILOT_CAPABILITIES:
         commandResult = MAV_RESULT_ACCEPTED;
-        _respondWithAutopilotVersion();
-        break;*/
+        respondWithAutopilotVersion();
+        break;
     }
 
     mavlink_msg_command_ack_pack(1,
@@ -287,6 +293,46 @@ void handleCommandLong(const mavlink_message_t *msg)
                                  commandResult);
     
     len = mavlink_msg_to_send_buffer(buf, &commandAck);
+    bytes_sent = sendto(sock, buf, len, 0, (struct sockaddr*)&gcAddr, sizeof (struct sockaddr_in));
+}
+
+void respondWithAutopilotVersion(void)
+{
+    mavlink_message_t msg;
+    uint16_t len;
+    uint8_t buf[BUFFER_LENGTH];
+    int bytes_sent;
+
+    uint8_t customVersion[8] = { };
+    uint32_t flightVersion = 0;
+    if (_firmwareType == MAV_AUTOPILOT_ARDUPILOTMEGA) {
+        flightVersion |= 3 << (8*3);
+        flightVersion |= 3 << (8*2);
+        flightVersion |= 0 << (8*1);
+        flightVersion |= FIRMWARE_VERSION_TYPE_DEV << (8*0);
+    } else if (_firmwareType == MAV_AUTOPILOT_PX4) {
+        flightVersion |= 1 << (8*3);
+        flightVersion |= 4 << (8*2);
+        flightVersion |= 1 << (8*1);
+        flightVersion |= FIRMWARE_VERSION_TYPE_DEV << (8*0);
+    }
+
+    mavlink_msg_autopilot_version_pack(1,
+                                       200,
+                                       &msg,
+                                       0,                               // capabilities,
+                                       flightVersion,                   // flight_sw_version,
+                                       0,                               // middleware_sw_version,
+                                       0,                               // os_sw_version,
+                                       0,                               // board_version,
+                                       (uint8_t *)&customVersion,       // flight_custom_version,
+                                       (uint8_t *)&customVersion,       // middleware_custom_version,
+                                       (uint8_t *)&customVersion,       // os_custom_version,
+                                       0,                               // vendor_id,
+                                       0,                               // product_id,
+                                       0);                              // uid
+    
+    len = mavlink_msg_to_send_buffer(buf, &msg);
     bytes_sent = sendto(sock, buf, len, 0, (struct sockaddr*)&gcAddr, sizeof (struct sockaddr_in));
 }
 
