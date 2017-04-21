@@ -82,6 +82,14 @@ Map {
         scaleText.text = text
     }
 
+    function setVisibleRegion(region) {
+        // This works around a bug on Qt where if you set a visibleRegion and then the user moves or zooms the map
+        // and then you set the same visibleRegion the map will not move/scale appropriately since it thinks there
+        // is nothing to do.
+        _map.visibleRegion = QtPositioning.rectangle(QtPositioning.coordinate(0, 0), QtPositioning.coordinate(0, 0))
+        _map.visibleRegion = region
+    }
+
     zoomLevel:                  18
     center:                     QGroundControl.lastKnownHomePosition
     gesture.flickDeceleration:  3000
@@ -119,6 +127,7 @@ Map {
         onMapTypeChanged:   updateActiveMapType()
     }
 
+    /// Ground Station location
     MapQuickItem {
         anchorPoint.x:  sourceItem.width  / 2
         anchorPoint.y:  sourceItem.height / 2
@@ -196,32 +205,20 @@ Map {
 
         property alias  drawingPolygon:     polygonDrawer.hoverEnabled
         property bool   adjustingPolygon:   false
-        property bool   polygonReady:       polygonDrawerPolygon.path.length > 3 ///< true: enough points have been captured to create a closed polygon
+        property bool   polygonReady:       polygonDrawerPolygonSet.path.length > 2 ///< true: enough points have been captured to create a closed polygon
+        property bool   justClicked: false
 
-        /// New polygon capture has started
-        signal polygonCaptureStarted
-
-        /// Polygon capture is complete
-        ///     @param coordinates Map coordinates for the polygon points
-        signal polygonCaptureFinished(var coordinates)
-
-        /// Polygon adjustment has begun
-        signal polygonAdjustStarted
-
-        /// Polygon Vertex coordinate has been adjusted
-        signal polygonAdjustVertex(int vertexIndex, var vertexCoordinate)
-
-        /// Polygon adjustment finished
-        signal polygonAdjustFinished
+        property var _callbackObject
 
         property var _vertexDragList: []
 
         /// Begin capturing a new polygon
         ///     polygonCaptureStarted will be signalled
-        function startCapturePolygon() {
+        function startCapturePolygon(callback) {
+            polygonDrawer._callbackObject = callback
             polygonDrawer.drawingPolygon = true
             polygonDrawer._clearPolygon()
-            polygonDrawer.polygonCaptureStarted()
+            polygonDrawer._callbackObject.polygonCaptureStarted()
         }
 
         /// Finish capturing the polygon
@@ -232,15 +229,14 @@ Map {
                 return false
             }
 
-            var polygonPath = polygonDrawerPolygon.path
-            polygonPath.pop() // get rid of drag coordinate
-            polygonDrawer._clearPolygon()
-            polygonDrawer.drawingPolygon = false
-            polygonDrawer.polygonCaptureFinished(polygonPath)
+            var polygonPath = polygonDrawerPolygonSet.path
+            _cancelCapturePolygon()
+            polygonDrawer._callbackObject.polygonCaptureFinished(polygonPath)
             return true
         }
 
-        function startAdjustPolygon(vertexCoordinates) {
+        function startAdjustPolygon(callback, vertexCoordinates) {
+            polygonDraw._callbackObject = callback
             polygonDrawer.adjustingPolygon = true
             for (var i=0; i<vertexCoordinates.length; i++) {
                 var mapItem = Qt.createQmlObject(
@@ -268,7 +264,7 @@ Map {
                             "" +
                             "   function updateCoordinate() { " +
                             "       vertexDrag.coordinate = _map.toCoordinate(Qt.point(vertexDrag.x + _halfSideLength, vertexDrag.y + _halfSideLength), false); " +
-                            "       polygonDrawer.polygonAdjustVertex(vertexDrag.index, vertexDrag.coordinate); " +
+                            "       polygonDrawer._callbackObject.polygonAdjustVertex(vertexDrag.index, vertexDrag.coordinate); " +
                             "   } " +
                             "" +
                             "   function updatePosition() { " +
@@ -299,17 +295,32 @@ Map {
                 mapItem.index = i
                 mapItem.updatePosition()
                 polygonDrawer._vertexDragList.push(mapItem)
-                polygonDrawer.polygonAdjustStarted()
+                polygonDrawer._callbackObject.polygonAdjustStarted()
             }
         }
 
         function finishAdjustPolygon() {
+            _cancelAdjustPolygon()
+            polygonDrawer._callbackObject.polygonAdjustFinished()
+        }
+
+        /// Cancels an in progress draw or adjust
+        function cancelPolygonEdit() {
+            _cancelAdjustPolygon()
+            _cancelCapturePolygon()
+        }
+
+        function _cancelAdjustPolygon() {
             polygonDrawer.adjustingPolygon = false
             for (var i=0; i<polygonDrawer._vertexDragList.length; i++) {
                 polygonDrawer._vertexDragList[i].destroy()
             }
             polygonDrawer._vertexDragList = []
-            polygonDrawer.polygonAdjustFinished()
+        }
+
+        function _cancelCapturePolygon() {
+            polygonDrawer._clearPolygon()
+            polygonDrawer.drawingPolygon = false
         }
 
         function _clearPolygon() {
@@ -319,10 +330,13 @@ Map {
             polygonDrawerNextPoint.path = [ bogusCoord, bogusCoord ]
             polygonDrawerPolygon.path = [ ]
             polygonDrawerNextPoint.path = [ ]
+            polygonDrawerPolygonSet.path = [ bogusCoord, bogusCoord ]
+            polygonDrawerPolygonSet.path = [ ]
         }
 
         onClicked: {
             if (mouse.button == Qt.LeftButton) {
+                polygonDrawer.justClicked = true
                 if (polygonDrawerPolygon.path.length > 2) {
                     // Make sure the new line doesn't intersect the existing polygon
                     var lastSegment = polygonDrawerPolygon.path.length - 2
@@ -343,11 +357,19 @@ Map {
                     // Add first coordinate
                     polygonPath.push(clickCoordinate)
                 } else {
-                    // Update finalized coordinate
-                    polygonPath[polygonDrawerPolygon.path.length - 1] = clickCoordinate
+                    // Add subsequent coordinate
+                    if (ScreenTools.isMobile) {
+                        // Since mobile has no mouse, the onPositionChangedHandler will not fire. We have to add the coordinate
+                        // here instead.
+                        polygonDrawer.justClicked = false
+                        polygonPath.push(clickCoordinate)
+                    } else {
+                        // The onPositionChanged handler for mouse movement will have already added the coordinate to the array.
+                        // Just update it to the final position
+                        polygonPath[polygonDrawerPolygon.path.length - 1] = clickCoordinate
+                    }
                 }
-                // Add next drag coordinate
-                polygonPath.push(clickCoordinate)
+                polygonDrawerPolygonSet.path = polygonPath
                 polygonDrawerPolygon.path = polygonPath
             } else if (polygonDrawer.polygonReady) {
                 finishCapturePolygon()
@@ -355,16 +377,25 @@ Map {
         }
 
         onPositionChanged: {
+            if (ScreenTools.isMobile) {
+                // We don't track mouse drag on mobile
+                return
+            }
             if (polygonDrawerPolygon.path.length) {
                 var dragCoordinate = _map.toCoordinate(Qt.point(mouse.x, mouse.y))
+                var polygonPath = polygonDrawerPolygon.path
+                if (polygonDrawer.justClicked){
+                    // Add new drag coordinate
+                    polygonPath.push(dragCoordinate)
+                    polygonDrawer.justClicked = false
+                }
 
                 // Update drag line
                 polygonDrawerNextPoint.path = [ polygonDrawerPolygon.path[polygonDrawerPolygon.path.length - 2], dragCoordinate ]
 
-                // Update drag coordinate
-                var polygonPath = polygonDrawerPolygon.path
                 polygonPath[polygonDrawerPolygon.path.length - 1] = dragCoordinate
                 polygonDrawerPolygon.path = polygonPath
+
             }
         }
     }
@@ -374,14 +405,20 @@ Map {
         id:         polygonDrawerPolygon
         color:      "blue"
         opacity:    0.5
-        visible:    polygonDrawer.drawingPolygon
+        visible:    polygonDrawerPolygon.path.length > 2
+    }
+    MapPolygon {
+        id:         polygonDrawerPolygonSet
+        color:      'green'
+        opacity:    0.5
+        visible:    polygonDrawer.polygonReady
     }
 
     /// Next line for polygon
     MapPolyline {
         id:         polygonDrawerNextPoint
         line.color: "green"
-        line.width: 5
+        line.width: 3
         visible:    polygonDrawer.drawingPolygon
     }
 

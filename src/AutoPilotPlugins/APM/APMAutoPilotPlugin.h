@@ -24,6 +24,8 @@ class APMSensorsComponent;
 class APMPowerComponent;
 class MotorComponent;
 class APMCameraComponent;
+class APMLightsComponent;
+class APMSubFrameComponent;
 class ESP8266Component;
 
 /// This is the APM specific implementation of the AutoPilot class.
@@ -40,6 +42,8 @@ public:
 
     APMAirframeComponent*       airframeComponent   (void) const { return _airframeComponent; }
     APMCameraComponent*         cameraComponent     (void) const { return _cameraComponent; }
+    APMLightsComponent*         lightsComponent     (void) const { return _lightsComponent; }
+    APMSubFrameComponent*       subFrameComponent   (void) const { return _subFrameComponent; }
     APMFlightModesComponent*    flightModesComponent(void) const { return _flightModesComponent; }
     APMPowerComponent*          powerComponent      (void) const { return _powerComponent; }
 #if 0
@@ -52,16 +56,14 @@ public:
     APMTuningComponent*         tuningComponent     (void) const { return _tuningComponent; }
     ESP8266Component*           esp8266Component    (void) const { return _esp8266Component; }
 
-public slots:
-    // FIXME: This is public until we restructure AutoPilotPlugin/FirmwarePlugin/Vehicle
-    void _parametersReadyPreChecks(bool missingParameters);
-
 private:
     bool                    _incorrectParameterVersion; ///< true: parameter version incorrect, setup not allowed
     QVariantList            _components;
 
     APMAirframeComponent*       _airframeComponent;
     APMCameraComponent*         _cameraComponent;
+    APMLightsComponent*         _lightsComponent;
+    APMSubFrameComponent*       _subFrameComponent;
     APMFlightModesComponent*    _flightModesComponent;
     APMPowerComponent*          _powerComponent;
 #if 0

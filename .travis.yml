@@ -28,15 +28,15 @@ matrix:
           env: SPEC=android-g++ CONFIG=installer
           sudo: false
         - os: osx
-          osx_image: xcode7.3
+          osx_image: xcode8
           env: SPEC=macx-clang CONFIG=debug
           sudo: required
         - os: osx
-          osx_image: xcode7.3
+          osx_image: xcode8
           env: SPEC=macx-clang CONFIG=installer
           sudo: required
         - os: osx
-          osx_image: xcode7.3
+          osx_image: xcode8
           env: SPEC=macx-ios-clang CONFIG=release
           sudo: false
 
@@ -55,7 +55,7 @@ addons:
     - libgstreamer-plugins-base1.0-dev
     - libgstreamer1.0-0:amd64
     - libgstreamer1.0-dev
-    - libsdl1.2-dev
+    - libsdl2-dev
     - libudev-dev
     - wget
 
@@ -108,7 +108,7 @@ install:
         ./android-ndk-r10e-linux-x86_64.bin > /dev/null &&
         export ANDROID_NDK_ROOT=`pwd`/android-ndk-r10e &&
         export ANDROID_SDK_ROOT=/usr/local/android-sdk &&
-        export PATH=/tmp/Qt/5.5/android_armv7/bin:`pwd`/android-ndk-r10e:$PATH
+        export PATH=/tmp/Qt/5.5/android_armv7/bin:`pwd`/android-ndk-r10e:$PATH && echo $PATH
         ;
     fi
 
@@ -125,7 +125,8 @@ install:
         export QT_DIR=Qt5.5-mac-clang/5.5/clang_64 &&
         export QT_QPA_PLATFORM_PLUGIN_PATH=/tmp/$QT_DIR/plugins &&
         export QML2_IMPORT_PATH=/tmp/$QT_DIR/qml &&
-        export PATH=/tmp/$QT_DIR/bin:$PATH
+        export PATH=/tmp/$QT_DIR/bin:$PATH &&
+        tools/patch_qt_for_xcode8.sh
         ;
     fi
 
@@ -135,7 +136,8 @@ install:
         tar jxf Qt5.5.1-ios-min.tar.bz2 -C /tmp &&
         export IOS_CCACHE_CC=`/usr/bin/xcrun -sdk iphoneos -find clang` &&
         export IOS_CCACHE_CXX=`/usr/bin/xcrun -sdk iphoneos -find clang++` &&
-        export PATH=/tmp/ios/bin:$PATH
+        export PATH=/tmp/ios/bin:$PATH &&
+        tools/patch_qt_for_xcode8.sh
         ;
     fi
 
@@ -172,12 +174,14 @@ script:
   #- ccache -s
 
   # unit tests linux/osx
-  - if [[ "${SPEC}" = "linux-g++-64" && "${CONFIG}" = "debug" ]]; then
-        mkdir -p ~/.config/QtProject/ && cp ${TRAVIS_BUILD_DIR}/test/qtlogging.ini ~/.config/QtProject/ &&
-        ./debug/QGroundControl --unittest;
-    elif [[ "${SPEC}" = "macx-clang" && "${CONFIG}" = "debug" ]]; then
-        mkdir -p ~/Library/Preferences/QtProject/ && cp ${TRAVIS_BUILD_DIR}/test/qtlogging.ini ~/Library/Preferences/QtProject/ &&
-        ./debug/qgroundcontrol.app/Contents/MacOS/QGroundControl --unittest;
+  - if [ "${TRAVIS_BRANCH}" != "master" ]; then
+        if [[ "${SPEC}" = "linux-g++-64" && "${CONFIG}" = "debug" ]]; then
+            mkdir -p ~/.config/QtProject/ && cp ${TRAVIS_BUILD_DIR}/test/qtlogging.ini ~/.config/QtProject/ &&
+            ./debug/QGroundControl --unittest;
+        elif [[ "${SPEC}" = "macx-clang" && "${CONFIG}" = "debug" ]]; then
+            mkdir -p ~/Library/Preferences/QtProject/ && cp ${TRAVIS_BUILD_DIR}/test/qtlogging.ini ~/Library/Preferences/QtProject/ &&
+            ./debug/qgroundcontrol.app/Contents/MacOS/QGroundControl --unittest;
+        fi
     fi
 
 after_success:

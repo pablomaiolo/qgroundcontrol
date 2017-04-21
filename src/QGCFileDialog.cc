@@ -12,10 +12,8 @@
 #include "QGCApplication.h"
 #include "MainWindow.h"
 
-#ifdef QT_DEBUG
-#ifndef __mobile__
-#include "UnitTest.h"
-#endif
+#ifdef UNITTEST_BUILD
+    #include "UnitTest.h"
 #endif
 
 #include <QRegularExpression>
@@ -30,12 +28,10 @@ QString QGCFileDialog::getExistingDirectory(
 {
     _validate(options);
     
-#ifdef QT_DEBUG
-#ifndef __mobile__
+#ifdef UNITTEST_BUILD
     if (qgcApp()->runningUnitTests()) {
         return UnitTest::_getExistingDirectory(parent, caption, dir, options);
     } else
-#endif
 #endif
     {
         return QFileDialog::getExistingDirectory(parent, caption, dir, options);
@@ -51,12 +47,10 @@ QString QGCFileDialog::getOpenFileName(
 {
     _validate(options);
     
-#ifdef QT_DEBUG
-#ifndef __mobile__
+#ifdef UNITTEST_BUILD
     if (qgcApp()->runningUnitTests()) {
         return UnitTest::_getOpenFileName(parent, caption, dir, filter, options);
     } else
-#endif
 #endif
     {
         return QFileDialog::getOpenFileName(parent, caption, dir, filter, NULL, options);
@@ -72,12 +66,10 @@ QStringList QGCFileDialog::getOpenFileNames(
 {
     _validate(options);
     
-#ifdef QT_DEBUG
-#ifndef __mobile__
+#ifdef UNITTEST_BUILD
     if (qgcApp()->runningUnitTests()) {
         return UnitTest::_getOpenFileNames(parent, caption, dir, filter, options);
     } else
-#endif
 #endif
     {
         return QFileDialog::getOpenFileNames(parent, caption, dir, filter, NULL, options);
@@ -95,12 +87,10 @@ QString QGCFileDialog::getSaveFileName(
 {
     _validate(options);
 
-#ifdef QT_DEBUG
-#ifndef __mobile__
+#ifdef UNITTEST_BUILD
     if (qgcApp()->runningUnitTests()) {
         return UnitTest::_getSaveFileName(parent, caption, dir, filter, defaultSuffix, options);
     } else
-#endif
 #endif
     {
         QString defaultSuffixCopy(defaultSuffix);
@@ -204,16 +194,12 @@ QString QGCFileDialog::_getFirstExtensionInFilter(const QString& filter) {
 /// @brief Validates and updates the parameters for the file dialog calls
 void QGCFileDialog::_validate(Options& options)
 {
+    Q_UNUSED(options)
+
     // You can't use QGCFileDialog if QGCApplication is not created yet.
     Q_ASSERT(qgcApp());
     
     Q_ASSERT_X(QThread::currentThread() == qgcApp()->thread(), "Threading issue", "QGCFileDialog can only be called from main thread");
-#ifdef __mobile__
-    Q_UNUSED(options)
-#else
-    // On OSX native dialog can hang so we always use Qt dialogs
-    options |= DontUseNativeDialog;
-#endif
     if (MainWindow::instance()) {
     }
 }

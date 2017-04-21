@@ -24,12 +24,14 @@
 #include "MissionControllerTest.h"
 #include "MissionManagerTest.h"
 #include "RadioConfigTest.h"
-#include "SetupViewTest.h"
 #include "MavlinkLogTest.h"
 #include "MainWindowTest.h"
 #include "FileManagerTest.h"
 #include "TCPLinkTest.h"
-#include "ParameterLoaderTest.h"
+#include "ParameterManagerTest.h"
+#include "MissionCommandTreeTest.h"
+#include "LogDownloadTest.h"
+#include "SendMavCommandTest.h"
 
 UT_REGISTER_TEST(FactSystemTestGeneric)
 UT_REGISTER_TEST(FactSystemTestPX4)
@@ -46,15 +48,17 @@ UT_REGISTER_TEST(MissionControllerTest)
 UT_REGISTER_TEST(MissionManagerTest)
 UT_REGISTER_TEST(RadioConfigTest)
 UT_REGISTER_TEST(TCPLinkTest)
-UT_REGISTER_TEST(FileManagerTest)
-UT_REGISTER_TEST(ParameterLoaderTest)
+UT_REGISTER_TEST(ParameterManagerTest)
+UT_REGISTER_TEST(MissionCommandTreeTest)
+UT_REGISTER_TEST(LogDownloadTest)
+UT_REGISTER_TEST(SendMavCommandTest)
 
 // List of unit test which are currently disabled.
 // If disabling a new test, include reason in comment.
 
-// works, but causes other tests to fail
-//UT_REGISTER_TEST(SetupViewTest)
-
 // FIXME: Temporarily disabled until this can be stabilized
 //UT_REGISTER_TEST(MainWindowTest)
+
+// Onboard file support has been removed until it can be make to work correctly
+//UT_REGISTER_TEST(FileManagerTest)
 

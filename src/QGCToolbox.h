@@ -13,7 +13,6 @@
 
 #include <QObject>
 
-class AutoPilotPluginManager;
 class FactSystem;
 class FirmwarePluginManager;
 class FlightMapSettings;
@@ -24,13 +23,16 @@ class JoystickManager;
 class FollowMe;
 class LinkManager;
 class MAVLinkProtocol;
-class MissionCommands;
+class MissionCommandTree;
 class MultiVehicleManager;
 class QGCMapEngineManager;
 class QGCApplication;
 class QGCImageProvider;
 class UASMessageHandler;
 class QGCPositionManager;
+class VideoManager;
+class MAVLinkLogManager;
+class QGCCorePlugin;
 
 /// This is used to manage all of our top level services/tools
 class QGCToolbox {
@@ -39,7 +41,6 @@ public:
     QGCToolbox(QGCApplication* app);
     ~QGCToolbox();
 
-    AutoPilotPluginManager*     autopilotPluginManager(void)    { return _autopilotPluginManager; }
     FirmwarePluginManager*      firmwarePluginManager(void)     { return _firmwarePluginManager; }
     FlightMapSettings*          flightMapSettings(void)         { return _flightMapSettings; }
     GAudioOutput*               audioOutput(void)               { return _audioOutput; }
@@ -47,20 +48,27 @@ public:
     JoystickManager*            joystickManager(void)           { return _joystickManager; }
     LinkManager*                linkManager(void)               { return _linkManager; }
     MAVLinkProtocol*            mavlinkProtocol(void)           { return _mavlinkProtocol; }
-    MissionCommands*            missionCommands(void)           { return _missionCommands; }
+    MissionCommandTree*         missionCommandTree(void)        { return _missionCommandTree; }
     MultiVehicleManager*        multiVehicleManager(void)       { return _multiVehicleManager; }
     QGCMapEngineManager*        mapEngineManager(void)          { return _mapEngineManager; }
     QGCImageProvider*           imageProvider()                 { return _imageProvider; }
     UASMessageHandler*          uasMessageHandler(void)         { return _uasMessageHandler; }
     FollowMe*                   followMe(void)                  { return _followMe; }
     QGCPositionManager*         qgcPositionManager(void)        { return _qgcPositionManager; }
+    VideoManager*               videoManager(void)              { return _videoManager; }
+    MAVLinkLogManager*          mavlinkLogManager(void)         { return _mavlinkLogManager; }
+    QGCCorePlugin*              corePlugin(void)                { return _corePlugin; }
+
 #ifndef __mobile__
     GPSManager*                 gpsManager(void)                { return _gpsManager; }
 #endif
 
 private:
+    void setChildToolboxes(void);
+    void _scanAndLoadPlugins(QGCApplication *app);
+
+
     GAudioOutput*               _audioOutput;
-    AutoPilotPluginManager*     _autopilotPluginManager;
     FactSystem*                 _factSystem;
     FirmwarePluginManager*      _firmwarePluginManager;
     FlightMapSettings*          _flightMapSettings;
@@ -72,12 +80,17 @@ private:
     JoystickManager*            _joystickManager;
     LinkManager*                _linkManager;
     MAVLinkProtocol*            _mavlinkProtocol;
-    MissionCommands*            _missionCommands;
+    MissionCommandTree*         _missionCommandTree;
     MultiVehicleManager*        _multiVehicleManager;
     QGCMapEngineManager*         _mapEngineManager;
     UASMessageHandler*          _uasMessageHandler;
     FollowMe*                   _followMe;
     QGCPositionManager*         _qgcPositionManager;
+    VideoManager*               _videoManager;
+    MAVLinkLogManager*          _mavlinkLogManager;
+    QGCCorePlugin*              _corePlugin;
+
+    friend class QGCApplication;
 };
 
 /// This is the base class for all tools

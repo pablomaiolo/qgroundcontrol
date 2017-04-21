@@ -39,20 +39,20 @@ Rectangle {
     readonly property string    _armedVehicleText:  qsTr("This operation cannot be performed while vehicle is armed.")
 
     property string _messagePanelText:              "missing message panel text"
-    property bool   _fullParameterVehicleAvailable: QGroundControl.multiVehicleManager.parameterReadyVehicleAvailable && !QGroundControl.multiVehicleManager.activeVehicle.missingParameters
+    property bool   _fullParameterVehicleAvailable: QGroundControl.multiVehicleManager.parameterReadyVehicleAvailable && !QGroundControl.multiVehicleManager.activeVehicle.parameterManager.missingParameters
 
     function showSummaryPanel()
     {
         if (_fullParameterVehicleAvailable) {
             if (QGroundControl.multiVehicleManager.activeVehicle.autopilot.vehicleComponents.length == 0) {
-                panelLoader.sourceComponent = noComponentsVehicleSummaryComponent
+                panelLoader.setSourceComponent(noComponentsVehicleSummaryComponent)
             } else {
-                panelLoader.source = "VehicleSummary.qml";
+                panelLoader.setSource("VehicleSummary.qml")
             }
         } else if (QGroundControl.multiVehicleManager.parameterReadyVehicleAvailable) {
-            panelLoader.sourceComponent = missingParametersVehicleSummaryComponent
+            panelLoader.setSourceComponent(missingParametersVehicleSummaryComponent)
         } else {
-            panelLoader.sourceComponent = disconnectedVehicleSummaryComponent
+            panelLoader.setSourceComponent(disconnectedVehicleSummaryComponent)
         }
     }
 
@@ -61,9 +61,9 @@ Rectangle {
         if (!ScreenTools.isMobile) {
             if (QGroundControl.multiVehicleManager.activeVehicleAvailable && QGroundControl.multiVehicleManager.activeVehicle.armed) {
                 _messagePanelText = _armedVehicleText
-                panelLoader.sourceComponent = messagePanelComponent
+                panelLoader.setSourceComponent(messagePanelComponent)
             } else {
-                panelLoader.source = "FirmwareUpgrade.qml";
+                panelLoader.setSource("FirmwareUpgrade.qml")
             }
         }
     }
@@ -72,34 +72,33 @@ Rectangle {
     {
         if (QGroundControl.multiVehicleManager.activeVehicleAvailable && QGroundControl.multiVehicleManager.activeVehicle.armed) {
             _messagePanelText = _armedVehicleText
-            panelLoader.sourceComponent = messagePanelComponent
+            panelLoader.setSourceComponent(messagePanelComponent)
         } else {
-            panelLoader.source = "JoystickConfig.qml";
+            panelLoader.setSource("JoystickConfig.qml")
         }
     }
 
     function showParametersPanel()
     {
-        panelLoader.source = "SetupParameterEditor.qml";
+        panelLoader.setSource("SetupParameterEditor.qml")
     }
 
     function showPX4FlowPanel()
     {
-        panelLoader.source = "PX4FlowSensor.qml";
+        panelLoader.setSource("PX4FlowSensor.qml")
     }
 
     function showVehicleComponentPanel(vehicleComponent)
     {
         if (QGroundControl.multiVehicleManager.activeVehicle.armed && !vehicleComponent.allowSetupWhileArmed) {
             _messagePanelText = _armedVehicleText
-            panelLoader.sourceComponent = messagePanelComponent
+            panelLoader.setSourceComponent(messagePanelComponent)
         } else {
             if (vehicleComponent.prerequisiteSetup != "") {
                 _messagePanelText = vehicleComponent.prerequisiteSetup + " setup must be completed prior to " + vehicleComponent.name + " setup."
-                panelLoader.sourceComponent = messagePanelComponent
+                panelLoader.setSourceComponent(messagePanelComponent)
             } else {
-                panelLoader.vehicleComponent = vehicleComponent
-                panelLoader.source = vehicleComponent.setupSource
+                panelLoader.setSource(vehicleComponent.setupSource, vehicleComponent)
                 for(var i = 0; i < componentRepeater.count; i++) {
                     var obj = componentRepeater.itemAt(i);
                     if (obj.text === vehicleComponent.name) {
@@ -257,6 +256,19 @@ Rectangle {
                 visible:                !ScreenTools.isShortScreen
             }
 
+            Repeater {
+                model:              QGroundControl.corePlugin.settings
+                visible:            QGroundControl.corePlugin.options.combineSettingsAndSetup
+                SubMenuButton {
+                    imageResource:  modelData.icon
+                    setupIndicator: false
+                    exclusiveGroup: setupButtonGroup
+                    text:           modelData.title
+                    visible:        QGroundControl.corePlugin.options.combineSettingsAndSetup
+                    onClicked:      panelLoader.setSource(modelData.url)
+                }
+            }
+
             SubMenuButton {
                 id:             summaryButton
                 imageResource: "/qmlimages/VehicleSummaryIcon.png"
@@ -349,6 +361,16 @@ Rectangle {
         anchors.right:          parent.right
         anchors.top:            parent.top
         anchors.bottom:         parent.bottom
+
+        function setSource(source, vehicleComponent) {
+            panelLoader.vehicleComponent = vehicleComponent
+            panelLoader.source = source
+        }
+
+        function setSourceComponent(sourceComponent, vehicleComponent) {
+            panelLoader.vehicleComponent = vehicleComponent
+            panelLoader.sourceComponent = sourceComponent
+        }
 
         property var vehicleComponent
     }

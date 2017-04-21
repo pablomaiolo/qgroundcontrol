@@ -29,7 +29,7 @@ QGCFlickable {
     property color  backgroundColor
     property var    maxHeight
 
-    property var    _activeVehicle: QGroundControl.multiVehicleManager.activeVehicle ? QGroundControl.multiVehicleManager.activeVehicle : QGroundControl.multiVehicleManager.disconnectedVehicle
+    property var    _activeVehicle: QGroundControl.multiVehicleManager.activeVehicle ? QGroundControl.multiVehicleManager.activeVehicle : QGroundControl.multiVehicleManager.offlineEditingVehicle
     property real   _margins:       ScreenTools.defaultFontPixelWidth / 2
     property real   _barWidth:      Math.round(ScreenTools.defaultFontPixelWidth * 3)
 
@@ -157,7 +157,7 @@ QGCFlickable {
         Rectangle {
             anchors.fill:   parent
             color:          backgroundColor
-            opacity:        0.95
+            opacity:        0.75
             visible:        _activeVehicle ? isNaN(_activeVehicle.vibration.xAxis.value) : false
 
             QGCLabel {

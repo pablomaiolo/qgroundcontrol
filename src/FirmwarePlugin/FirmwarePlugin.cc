@@ -7,13 +7,36 @@
  *
  ****************************************************************************/
 
-
 #include "FirmwarePlugin.h"
 #include "QGCApplication.h"
+#include "Generic/GenericAutoPilotPlugin.h"
 
 #include <QDebug>
 
+static FirmwarePluginFactoryRegister* _instance = NULL;
+
 const char* guided_mode_not_supported_by_vehicle = "Guided mode not supported by Vehicle.";
+
+const char* FirmwarePlugin::px4FollowMeFlightMode = "Follow Me";
+
+FirmwarePluginFactory::FirmwarePluginFactory(void)
+{
+    FirmwarePluginFactoryRegister::instance()->registerPluginFactory(this);
+}
+
+FirmwarePluginFactoryRegister* FirmwarePluginFactoryRegister::instance(void)
+{
+    if (!_instance) {
+        _instance = new FirmwarePluginFactoryRegister;
+    }
+
+    return _instance;
+}
+
+AutoPilotPlugin* FirmwarePlugin::autopilotPlugin(Vehicle* vehicle)
+{
+    return new GenericAutoPilotPlugin(vehicle, vehicle);
+}
 
 bool FirmwarePlugin::isCapable(const Vehicle *vehicle, FirmwareCapabilities capabilities)
 {
@@ -38,12 +61,12 @@ QString FirmwarePlugin::flightMode(uint8_t base_mode, uint32_t custom_mode) cons
         const char* name;
     };
     static const struct Bit2Name rgBit2Name[] = {
-        { MAV_MODE_FLAG_MANUAL_INPUT_ENABLED,   "Manual" },
-        { MAV_MODE_FLAG_STABILIZE_ENABLED,      "Stabilize" },
-        { MAV_MODE_FLAG_GUIDED_ENABLED,         "Guided" },
-        { MAV_MODE_FLAG_AUTO_ENABLED,           "Auto" },
-        { MAV_MODE_FLAG_TEST_ENABLED,           "Test" },
-    };
+    { MAV_MODE_FLAG_MANUAL_INPUT_ENABLED,   "Manual" },
+    { MAV_MODE_FLAG_STABILIZE_ENABLED,      "Stabilize" },
+    { MAV_MODE_FLAG_GUIDED_ENABLED,         "Guided" },
+    { MAV_MODE_FLAG_AUTO_ENABLED,           "Auto" },
+    { MAV_MODE_FLAG_TEST_ENABLED,           "Test" },
+};
 
     Q_UNUSED(custom_mode);
 
@@ -112,9 +135,10 @@ bool FirmwarePlugin::adjustIncomingMavlinkMessage(Vehicle* vehicle, mavlink_mess
     return true;
 }
 
-void FirmwarePlugin::adjustOutgoingMavlinkMessage(Vehicle* vehicle, mavlink_message_t* message)
+void FirmwarePlugin::adjustOutgoingMavlinkMessage(Vehicle* vehicle, LinkInterface* outgoingLink, mavlink_message_t* message)
 {
     Q_UNUSED(vehicle);
+    Q_UNUSED(outgoingLink);
     Q_UNUSED(message);
     // Generic plugin does no message adjustment
 }
@@ -140,12 +164,31 @@ QList<MAV_CMD> FirmwarePlugin::supportedMissionCommands(void)
     return QList<MAV_CMD>();
 }
 
-void FirmwarePlugin::missionCommandOverrides(QString& commonJsonFilename, QString& fixedWingJsonFilename, QString& multiRotorJsonFilename) const
+QString FirmwarePlugin::missionCommandOverrides(MAV_TYPE vehicleType) const
 {
-    // No overrides
-    commonJsonFilename.clear();
-    fixedWingJsonFilename.clear();
-    multiRotorJsonFilename.clear();
+    switch (vehicleType) {
+    case MAV_TYPE_GENERIC:
+        return QStringLiteral(":/json/MavCmdInfoCommon.json");
+        break;
+    case MAV_TYPE_FIXED_WING:
+        return QStringLiteral(":/json/MavCmdInfoFixedWing.json");
+        break;
+    case MAV_TYPE_QUADROTOR:
+        return QStringLiteral(":/json/MavCmdInfoMultiRotor.json");
+        break;
+    case MAV_TYPE_VTOL_QUADROTOR:
+        return QStringLiteral(":/json/MavCmdInfoVTOL.json");
+        break;
+    case MAV_TYPE_SUBMARINE:
+        return QStringLiteral(":/json/MavCmdInfoSub.json");
+        break;
+    case MAV_TYPE_GROUND_ROVER:
+        return QStringLiteral(":/json/MavCmdInfoRover.json");
+        break;
+    default:
+        qWarning() << "FirmwarePlugin::missionCommandOverrides called with bad MAV_TYPE:" << vehicleType;
+        return QString();
+    }
 }
 
 void FirmwarePlugin::getParameterMetaDataVersionInfo(const QString& metaDataFile, int& majorVersion, int& minorVersion)

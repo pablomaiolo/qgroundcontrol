@@ -312,7 +312,7 @@ bool APMParameterMetaData::parseParameterAttributes(QXmlStreamReader& xml, APMFa
     // as long as param doens't end
     while (!(elementName == "param" && xml.isEndElement())) {
         if (elementName.isEmpty()) {
-            // skip empty elements. Somehow I am getting lot of these. Dont know what to do with them.
+            // skip empty elements. Somehow I am getting lot of these. Don't know what to do with them.
         } else if (elementName == "field") {
             QString attributeName = xml.attributes().value("name").toString();
 
@@ -566,6 +566,15 @@ void APMParameterMetaData::addMetaDataToFact(Fact* fact, MAV_TYPE vehicleType)
         } else {
             qCDebug(APMParameterMetaDataLog) << "Invalid value for increment, name:" << metaData->name() << " increment:" << rawMetaData->incrementSize;
         }
+    }
+
+    // ArduPilot does not yet support decimal places meta data. So for P/I/D parameters we force to 6 places
+    if ((fact->name().endsWith(QStringLiteral("_P")) ||
+         fact->name().endsWith(QStringLiteral("_I")) ||
+         fact->name().endsWith(QStringLiteral("_D"))) &&
+            (fact->type() == FactMetaData::valueTypeFloat ||
+             fact->type() == FactMetaData::valueTypeDouble)) {
+        metaData->setDecimalPlaces(6);
     }
 
     fact->setMetaData(metaData);

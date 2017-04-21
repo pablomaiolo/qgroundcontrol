@@ -24,12 +24,12 @@
 #include "QGCToolbox.h"
 #include "ProtocolInterface.h"
 #include "MAVLinkProtocol.h"
-#ifndef __mobile__
+#if !defined(__mobile__)
 #include "LogReplayLink.h"
 #endif
 #include "QmlObjectListModel.h"
 
-#ifndef __ios__
+#ifndef NO_SERIAL_LINK
     #include "SerialLink.h"
 #endif
 
@@ -66,19 +66,13 @@ public:
     Q_PROPERTY(bool autoconnect3DRRadio                 READ autoconnect3DRRadio                WRITE setAutoconnect3DRRadio    NOTIFY autoconnect3DRRadioChanged)
     Q_PROPERTY(bool autoconnectPX4Flow                  READ autoconnectPX4Flow                 WRITE setAutoconnectPX4Flow     NOTIFY autoconnectPX4FlowChanged)
     Q_PROPERTY(bool autoconnectRTKGPS                   READ autoconnectRTKGPS                  WRITE setAutoconnectRTKGPS      NOTIFY autoconnectRTKGPSChanged)
-    Q_PROPERTY(bool isBluetoothAvailable                READ isBluetoothAvailable               CONSTANT)
+    Q_PROPERTY(bool autoconnectLibrePilot               READ autoconnectLibrePilot              WRITE setAutoconnectLibrePilot  NOTIFY autoconnectLibrePilotChanged)
+    Q_PROPERTY(bool isBluetoothAvailable                READ isBluetoothAvailable                                               CONSTANT)
 
-    /// LinkInterface Accessor
-    Q_PROPERTY(QmlObjectListModel*  links               READ links                              CONSTANT)
-    /// LinkConfiguration Accessor
-    Q_PROPERTY(QmlObjectListModel*  linkConfigurations  READ linkConfigurations                                                 NOTIFY linkConfigurationsChanged)
-    /// List of comm type strings
-    Q_PROPERTY(QStringList          linkTypeStrings     READ linkTypeStrings                    CONSTANT)
-    /// List of supported baud rates for serial links
-    Q_PROPERTY(QStringList          serialBaudRates     READ serialBaudRates                    CONSTANT)
-    /// List of comm ports display names
+    Q_PROPERTY(QmlObjectListModel*  linkConfigurations  READ _qmlLinkConfigurations                                             NOTIFY linkConfigurationsChanged)
+    Q_PROPERTY(QStringList          linkTypeStrings     READ linkTypeStrings                                                    CONSTANT)
+    Q_PROPERTY(QStringList          serialBaudRates     READ serialBaudRates                                                    CONSTANT)
     Q_PROPERTY(QStringList          serialPortStrings   READ serialPortStrings                                                  NOTIFY commPortStringsChanged)
-    /// List of comm ports
     Q_PROPERTY(QStringList          serialPorts         READ serialPorts                                                        NOTIFY commPortsChanged)
 
     // Create/Edit Link Configuration
@@ -96,20 +90,21 @@ public:
     bool autoconnect3DRRadio        (void)  { return _autoconnect3DRRadio; }
     bool autoconnectPX4Flow         (void)  { return _autoconnectPX4Flow; }
     bool autoconnectRTKGPS          (void)  { return _autoconnectRTKGPS; }
+    bool autoconnectLibrePilot      (void)  { return _autoconnectLibrePilot; }
     bool isBluetoothAvailable       (void);
 
-    QmlObjectListModel* links               (void) { return &_links; }
-    QmlObjectListModel* linkConfigurations  (void) { return &_linkConfigurations; }
-    QStringList         linkTypeStrings     (void) const;
-    QStringList         serialBaudRates     (void);
-    QStringList         serialPortStrings   (void);
-    QStringList         serialPorts         (void);
+    QList<LinkInterface*> links                 (void);
+    QStringList         linkTypeStrings         (void) const;
+    QStringList         serialBaudRates         (void);
+    QStringList         serialPortStrings       (void);
+    QStringList         serialPorts             (void);
 
-    void setAutoconnectUDP      (bool autoconnect);
-    void setAutoconnectPixhawk  (bool autoconnect);
-    void setAutoconnect3DRRadio (bool autoconnect);
-    void setAutoconnectPX4Flow  (bool autoconnect);
-    void setAutoconnectRTKGPS   (bool autoconnect);
+    void setAutoconnectUDP        (bool autoconnect);
+    void setAutoconnectPixhawk    (bool autoconnect);
+    void setAutoconnect3DRRadio   (bool autoconnect);
+    void setAutoconnectPX4Flow    (bool autoconnect);
+    void setAutoconnectRTKGPS     (bool autoconnect);
+    void setAutoconnectLibrePilot (bool autoconnect);
 
     /// Load list of link configurations from disk
     void loadLinkConfigurationList();
@@ -129,7 +124,10 @@ public:
 
     /// Creates, connects (and adds) a link  based on the given configuration instance.
     /// Link takes ownership of config.
-    Q_INVOKABLE LinkInterface* createConnectedLink(LinkConfiguration* config);
+    LinkInterface* createConnectedLink(SharedLinkConfigurationPointer& config);
+
+    // This should only be used by Qml code
+    Q_INVOKABLE void createConnectedLink(LinkConfiguration* config);
 
     /// Creates, connects (and adds) a link  based on the given configuration name.
     LinkInterface* createConnectedLink(const QString& name);
@@ -162,12 +160,25 @@ public:
     // Override from QGCTool
     virtual void setToolbox(QGCToolbox *toolbox);
 
+    /// @return This mavlink channel is never assigned to a vehicle.
+    uint8_t reservedMavlinkChannel(void) { return 0; }
+
+    /// If you are going to hold a reference to a LinkInterface* in your object you must reference count it
+    /// by using this method to get access to the shared pointer.
+    SharedLinkInterfacePointer sharedLinkInterfacePointerForLink(LinkInterface* link);
+
+    bool containsLink(LinkInterface* link);
+
+    SharedLinkConfigurationPointer addConfiguration(LinkConfiguration* config);
+
 signals:
-    void autoconnectUDPChanged      (bool autoconnect);
-    void autoconnectPixhawkChanged  (bool autoconnect);
-    void autoconnect3DRRadioChanged (bool autoconnect);
-    void autoconnectPX4FlowChanged  (bool autoconnect);
-    void autoconnectRTKGPSChanged   (bool autoconnect);
+    void autoconnectUDPChanged        (bool autoconnect);
+    void autoconnectPixhawkChanged    (bool autoconnect);
+    void autoconnect3DRRadioChanged   (bool autoconnect);
+    void autoconnectPX4FlowChanged    (bool autoconnect);
+    void autoconnectRTKGPSChanged     (bool autoconnect);
+    void autoconnectLibrePilotChanged (bool autoconnect);
+
 
     void newLink(LinkInterface* link);
 
@@ -194,18 +205,20 @@ private slots:
     void _linkConnected(void);
     void _linkDisconnected(void);
     void _linkConnectionRemoved(LinkInterface* link);
-#ifndef __ios__
+#ifndef NO_SERIAL_LINK
     void _activeLinkCheck(void);
 #endif
 
 private:
+    QmlObjectListModel* _qmlLinkConfigurations  (void) { return &_qmlConfigurations; }
     bool _connectionsSuspendedMsg(void);
     void _updateAutoConnectLinks(void);
     void _updateSerialPorts();
     void _fixUnnamed(LinkConfiguration* config);
     bool _setAutoconnectWorker(bool& currentAutoconnect, bool newAutoconnect, const char* autoconnectKey);
+    void _removeConfiguration(LinkConfiguration* config);
 
-#ifndef __ios__
+#ifndef NO_SERIAL_LINK
     SerialConfiguration* _autoconnectConfigurationsContainsPort(const QString& portName);
 #endif
 
@@ -218,9 +231,11 @@ private:
 
     MAVLinkProtocol*    _mavlinkProtocol;
 
-    QmlObjectListModel  _links;
-    QmlObjectListModel  _linkConfigurations;
-    QmlObjectListModel  _autoconnectConfigurations;
+
+    QList<SharedLinkInterfacePointer>       _sharedLinks;
+    QList<SharedLinkConfigurationPointer>   _sharedConfigurations;
+    QList<SharedLinkConfigurationPointer>   _sharedAutoconnectConfigurations;
+    QmlObjectListModel                      _qmlConfigurations;
 
     QMap<QString, int>  _autoconnectWaitList;   ///< key: QGCSerialPortInfo.systemLocation, value: wait count
     QStringList _commPortList;
@@ -231,8 +246,8 @@ private:
     bool _autoconnect3DRRadio;
     bool _autoconnectPX4Flow;
     bool _autoconnectRTKGPS;
-
-#ifndef __ios__
+    bool _autoconnectLibrePilot;
+#ifndef NO_SERIAL_LINK
     QTimer              _activeLinkCheckTimer;                  ///< Timer which checks for a vehicle showing up on a usb direct link
     QList<SerialLink*>  _activeLinkCheckList;                   ///< List of links we are waiting for a vehicle to show up on
     static const int    _activeLinkCheckTimeoutMSecs = 15000;   ///< Amount of time to wait for a heatbeat. Keep in mind ArduPilot stack heartbeat is slow to come.
@@ -244,6 +259,7 @@ private:
     static const char*  _autoconnect3DRRadioKey;
     static const char*  _autoconnectPX4FlowKey;
     static const char*  _autoconnectRTKGPSKey;
+    static const char*  _autoconnectLibrePilotKey;
     static const char*  _defaultUPDLinkName;
     static const int    _autoconnectUpdateTimerMSecs;
     static const int    _autoconnectConnectDelayMSecs;

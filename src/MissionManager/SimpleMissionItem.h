@@ -13,6 +13,7 @@
 
 #include "VisualMissionItem.h"
 #include "MissionItem.h"
+#include "MissionCommandTree.h"
 
 /// A SimpleMissionItem is used to represent a single MissionItem to the ui.
 class SimpleMissionItem : public VisualMissionItem
@@ -70,7 +71,7 @@ public:
     void setDistance        (double distance);
 
     bool load(QTextStream &loadStream);
-    bool load(const QJsonObject& json, QString& errorString);
+    bool load(const QJsonObject& json, int sequenceNumber, QString& errorString);
 
     bool relativeAltitude(void) { return _missionItem.frame() == MAV_FRAME_GLOBAL_RELATIVE_ALT; }
 
@@ -134,6 +135,8 @@ private:
     bool        _homePositionSpecialCase;   ///< true: This item is being used as a ui home position indicator
     bool        _showHomePosition;
 
+    MissionCommandTree* _commandTree;
+
     Fact    _altitudeRelativeToHomeFact;
     Fact    _supportedCommandFact;
     
@@ -154,8 +157,6 @@ private:
 
     bool _syncingAltitudeRelativeToHomeAndFrame;    ///< true: already in a sync signal, prevents signal loop
     bool _syncingHeadingDegreesAndParam4;           ///< true: already in a sync signal, prevents signal loop
-
-    const MissionCommands*  _missionCommands;
 };
 
 #endif

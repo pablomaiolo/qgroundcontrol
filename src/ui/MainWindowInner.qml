@@ -27,22 +27,20 @@ Item {
 
     signal reallyClose
 
-    readonly property string _planViewSource:       "MissionEditor.qml"
-    readonly property string _setupViewSource:      "SetupView.qml"
-    readonly property string _settingsViewSource:   "AppSettings.qml"
-
     QGCPalette { id: qgcPal; colorGroupEnabled: true }
 
-    property real   tbHeight:           ScreenTools.isMobile ? (ScreenTools.isTinyScreen ? (mainWindow.width * 0.0666) : (mainWindow.width * 0.05)) : ScreenTools.defaultFontPixelHeight * 3
-    property int    tbCellHeight:       tbHeight * 0.75
-    property real   tbSpacing:          ScreenTools.isMobile ? width * 0.00824 : 9.54
-    property real   tbButtonWidth:      tbCellHeight * 1.35
-    property real   menuButtonWidth:    (tbButtonWidth * 2) + (tbSpacing * 4) + 1
     property var    gcsPosition:        QtPositioning.coordinate()  // Starts as invalid coordinate
     property var    currentPopUp:       null
     property real   currentCenterX:     0
     property var    activeVehicle:      QGroundControl.multiVehicleManager.activeVehicle
     property string formatedMessage:    activeVehicle ? activeVehicle.formatedMessage : ""
+
+    property var _viewList: [ settingsViewLoader, setupViewLoader, planViewLoader, flightView, analyzeViewLoader ]
+
+    readonly property string _settingsViewSource:   "AppSettings.qml"
+    readonly property string _setupViewSource:      "SetupView.qml"
+    readonly property string _planViewSource:       "MissionEditor.qml"
+    readonly property string _analyzeViewSource:    "AnalyzeView.qml"
 
     onHeightChanged: {
         //-- We only deal with the available height if within the Fly or Plan view
@@ -51,16 +49,38 @@ Item {
         }
     }
 
-    function showFlyView() {
+    function hideAllViews() {
+        for (var i=0; i<_viewList.length; i++) {
+            _viewList[i].visible = false
+        }
+    }
+
+    function showSettingsView() {
         if(currentPopUp) {
             currentPopUp.close()
         }
-        ScreenTools.availableHeight = parent.height - toolBar.height
-        settingsViewLoader.visible  = false
-        flightView.visible          = true
-        setupViewLoader.visible     = false
-        planViewLoader.visible      = false
-        toolBar.checkFlyButton()
+        //-- In settings view, the full height is available. Set to 0 so it is ignored.
+        ScreenTools.availableHeight = 0
+        hideAllViews()
+        if (settingsViewLoader.source != _settingsViewSource) {
+            settingsViewLoader.source  = _settingsViewSource
+        }
+        settingsViewLoader.visible  = true
+        toolBar.checkSettingsButton()
+    }
+
+    function showSetupView() {
+        if(currentPopUp) {
+            currentPopUp.close()
+        }
+        //-- In setup view, the full height is available. Set to 0 so it is ignored.
+        ScreenTools.availableHeight = 0
+        hideAllViews()
+        if (setupViewLoader.source  != _setupViewSource) {
+            setupViewLoader.source  = _setupViewSource
+        }
+        setupViewLoader.visible  = true
+        toolBar.checkSetupButton()
     }
 
     function showPlanView() {
@@ -71,61 +91,32 @@ Item {
             planViewLoader.source   = _planViewSource
         }
         ScreenTools.availableHeight = parent.height - toolBar.height
-        settingsViewLoader.visible  = false
-        flightView.visible          = false
-        setupViewLoader.visible     = false
-        planViewLoader.visible      = true
+        hideAllViews()
+        planViewLoader.visible = true
         toolBar.checkPlanButton()
     }
 
-    function showSetupView() {
+    function showFlyView() {
         if(currentPopUp) {
             currentPopUp.close()
         }
-        //-- In setup view, the full height is available. Set to 0 so it is ignored.
-        ScreenTools.availableHeight = 0
-        if (setupViewLoader.source  != _setupViewSource) {
-            setupViewLoader.source  = _setupViewSource
-        }
-        settingsViewLoader.visible  = false
-        flightView.visible          = false
-        setupViewLoader.visible     = true
-        planViewLoader.visible      = false
-        toolBar.checkSetupButton()
+        ScreenTools.availableHeight = parent.height - toolBar.height
+        hideAllViews()
+        flightView.visible = true
+        toolBar.checkFlyButton()
     }
 
-    function showSettingsView() {
+    function showAnalyzeView() {
         if(currentPopUp) {
             currentPopUp.close()
         }
-        //-- In preferences view, the full height is available. Set to 0 so it is ignored.
         ScreenTools.availableHeight = 0
-        if (settingsViewLoader.source != _settingsViewSource) {
-            settingsViewLoader.source  = _settingsViewSource
+        if (analyzeViewLoader.source  != _analyzeViewSource) {
+            analyzeViewLoader.source  = _analyzeViewSource
         }
-        flightView.visible          = false
-        setupViewLoader.visible     = false
-        planViewLoader.visible      = false
-        settingsViewLoader.visible  = true
-        toolBar.checkSettingsButton()
-    }
-
-    // The following are use for unit testing only
-
-    function showSetupFirmware() {
-        setupViewLoader.item.showFirmwarePanel()
-    }
-
-    function showSetupParameters() {
-        setupViewLoader.item.showParametersPanel()
-    }
-
-    function showSetupSummary() {
-        setupViewLoader.item.showSummaryPanel()
-    }
-
-    function showSetupVehicleComponent(vehicleComponent) {
-        setupViewLoader.item.showVehicleComponentPanel(vehicleComponent)
+        hideAllViews()
+        analyzeViewLoader.visible = true
+        toolBar.checkAnalyzeButton()
     }
 
     /// Start the process of closing QGroundControl. Prompts the user are needed.
@@ -253,7 +244,7 @@ Item {
     function showPopUp(dropItem, centerX) {
         if(currentPopUp) {
             currentPopUp.close()
-          }
+        }
         indicatorDropdown.centerX = centerX
         indicatorDropdown.sourceComponent = dropItem
         indicatorDropdown.visible = true
@@ -264,32 +255,35 @@ Item {
 
     MainToolBar {
         id:                 toolBar
-        height:             tbHeight
+        height:             ScreenTools.defaultFontPixelHeight * 3
         anchors.left:       parent.left
         anchors.right:      parent.right
         anchors.top:        parent.top
-        mainWindow:         mainWindow
         isBackgroundDark:   flightView.isBackgroundDark
         z:                  QGroundControl.zOrderTopMost
-        onShowSetupView:    mainWindow.showSetupView()
-        onShowPlanView:     mainWindow.showPlanView()
-        onShowFlyView:      mainWindow.showFlyView()
-        onShowSettingsView: mainWindow.showSettingsView()
-        Component.onCompleted: {
-            ScreenTools.availableHeight = parent.height - toolBar.height
-        }
-    }
 
-    FlightDisplayView {
-        id:                 flightView
-        anchors.fill:       parent
-        visible:            true
+        Component.onCompleted:  ScreenTools.availableHeight = parent.height - toolBar.height
+        onShowSettingsView:     mainWindow.showSettingsView()
+        onShowSetupView:        mainWindow.showSetupView()
+        onShowPlanView:         mainWindow.showPlanView()
+        onShowFlyView:          mainWindow.showFlyView()
+        onShowAnalyzeView:      mainWindow.showAnalyzeView()
     }
 
     Loader {
-        id:                 planViewLoader
-        anchors.fill:       parent
+        id:                 settingsViewLoader
+        anchors.left:       parent.left
+        anchors.right:      parent.right
+        anchors.top:        toolBar.bottom
+        anchors.bottom:     parent.bottom
         visible:            false
+/*
+        onVisibleChanged: {
+            if (!visible) {
+                // Free up the memory for this when not shown. No need to persist.
+                source = ""
+            }
+        }*/
     }
 
     Loader {
@@ -302,20 +296,25 @@ Item {
     }
 
     Loader {
-        id:                 settingsViewLoader
+        id:                 planViewLoader
+        anchors.fill:       parent
+        visible:            false
+    }
+
+    FlightDisplayView {
+        id:                 flightView
+        anchors.fill:       parent
+        visible:            true
+    }
+
+    Loader {
+        id:                 analyzeViewLoader
         anchors.left:       parent.left
         anchors.right:      parent.right
         anchors.top:        toolBar.bottom
         anchors.bottom:     parent.bottom
         visible:            false
-
-        onVisibleChanged: {
-            if (!visible) {
-                // Free up the memory for this when not shown. No need to persist.
-                source = ""
-            }
-        }
-     }
+    }
 
     //-------------------------------------------------------------------------
     //-- Dismiss Pop Up Messages
@@ -358,7 +357,7 @@ Item {
         border.width:       2
         anchors.horizontalCenter:   parent.horizontalCenter
         anchors.top:                parent.top
-        anchors.topMargin:          tbHeight + ScreenTools.defaultFontPixelHeight
+        anchors.topMargin:          toolBar.height + ScreenTools.defaultFontPixelHeight
         MouseArea {
             // This MouseArea prevents the Map below it from getting Mouse events. Without this
             // things like mousewheel will scroll the Flickable and then scroll the map as well.
@@ -436,7 +435,7 @@ Item {
         radius:                     ScreenTools.defaultFontPixelHeight * 0.5
         anchors.horizontalCenter:   parent.horizontalCenter
         anchors.top:                parent.top
-        anchors.topMargin:          tbHeight + ScreenTools.defaultFontPixelHeight / 2
+        anchors.topMargin:          toolBar.height + ScreenTools.defaultFontPixelHeight / 2
         border.color:               "#808080"
         border.width:               2
 

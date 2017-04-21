@@ -32,7 +32,6 @@
 #include "MultiVehicleManager.h"
 #include "JoystickManager.h"
 #include "GAudioOutput.h"
-#include "AutoPilotPluginManager.h"
 #include "UASMessageHandler.h"
 #include "FactSystem.h"
 
@@ -67,6 +66,8 @@ public:
 
     static const char* parameterFileExtension;
     static const char* missionFileExtension;
+    static const char* fenceFileExtension;
+    static const char* rallyPointFileExtension;
     static const char* telemetryFileExtension;
 
     /// @brief Sets the persistent flag to delete all settings the next time QGroundControl is started.
@@ -126,8 +127,6 @@ public slots:
     /// You can connect to this slot to show a critical message box from a different thread.
     void criticalMessageBoxOnMainThread(const QString& title, const QString& msg);
 
-    void showFlyView(void);
-    void showPlanView(void);
     void showSetupView(void);
 
     void qmlAttemptWindowClose(void);
@@ -161,19 +160,14 @@ public:
     ///         unit tests. Although public should only be called by main.
     bool _initForUnitTests(void);
 
-    void _showSetupFirmware(void);
-    void _showSetupParameters(void);
-    void _showSetupSummary(void);
-    void _showSetupVehicleComponent(VehicleComponent* vehicleComponent);
-
     static QGCApplication*  _app;   ///< Our own singleton. Should be reference directly by qgcApp
 
 private slots:
     void _missingParamsDisplay(void);
 
 private:
-    void _loadCurrentStyle(void);
-    QObject* _rootQmlObject(void);
+    void        _loadCurrentStyle   ();
+    QObject*    _rootQmlObject      ();
 
 #ifdef __mobile__
     QQmlApplicationEngine* _qmlAppEngine;
@@ -211,6 +205,7 @@ private:
 
     /// Unit Test have access to creating and destroying singletons
     friend class UnitTest;
+
 };
 
 /// @brief Returns the QGCApplication object singleton.

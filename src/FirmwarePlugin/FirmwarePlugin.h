@@ -17,6 +17,8 @@
 #include "QGCMAVLink.h"
 #include "VehicleComponent.h"
 #include "AutoPilotPlugin.h"
+#include "GeoFenceManager.h"
+#include "RallyPointManager.h"
 
 #include <QList>
 #include <QString>
@@ -40,8 +42,8 @@ public:
         SetFlightModeCapability =           1 << 0, ///< FirmwarePlugin::setFlightMode method is supported
         MavCmdPreflightStorageCapability =  1 << 1, ///< MAV_CMD_PREFLIGHT_STORAGE is supported
         PauseVehicleCapability =            1 << 2, ///< Vehicle supports pausing at current location
-        GuidedModeCapability =              1 << 3, ///< Vehicle Supports guided mode commands
-        OrbitModeCapability =               1 << 4, ///< Vehicle Supports orbit mode
+        GuidedModeCapability =              1 << 3, ///< Vehicle supports guided mode commands
+        OrbitModeCapability =               1 << 4, ///< Vehicle supports orbit mode
     } FirmwareCapabilities;
 
     /// Maps from on parameter name to another
@@ -59,7 +61,10 @@ public:
     ///     value:  remapParamNameMinorVersionRemapMap_t entry
     typedef QMap<int, remapParamNameMinorVersionRemapMap_t> remapParamNameMajorVersionMap_t;
 
-    /// Called when Vehicle is first created to send any necessary mavlink messages to the firmware.
+    /// @return The AutoPilotPlugin associated with this firmware plugin. Must be overriden.
+    virtual AutoPilotPlugin* autopilotPlugin(Vehicle* vehicle);
+
+    /// Called when Vehicle is first created to perform any firmware specific setup.
     virtual void initializeVehicle(Vehicle* vehicle);
 
     /// @return true: Firmware supports all specified capabilites
@@ -157,8 +162,9 @@ public:
     /// This is handy to adjust or differences in mavlink spec implementations such that the base code can remain
     /// mavlink generic.
     ///     @param vehicle Vehicle message came from
+    ///     @param outgoingLink Link that messae is going out on
     ///     @param message[in,out] Mavlink message to adjust if needed.
-    virtual void adjustOutgoingMavlinkMessage(Vehicle* vehicle, mavlink_message_t* message);
+    virtual void adjustOutgoingMavlinkMessage(Vehicle* vehicle, LinkInterface* outgoingLink, mavlink_message_t* message);
 
     /// Determines how to handle the first item of the mission item list. Internally to QGC the first item
     /// is always the home position.
@@ -178,10 +184,10 @@ public:
     virtual void getParameterMetaDataVersionInfo(const QString& metaDataFile, int& majorVersion, int& minorVersion);
 
     /// Returns the internal resource parameter meta date file.
-    virtual QString internalParameterMetaDataFile(void) { return QString(); }
+    virtual QString internalParameterMetaDataFile(Vehicle* vehicle) { Q_UNUSED(vehicle); return QString(); }
 
     /// Loads the specified parameter meta data file.
-    /// @return Opaque parameter meta data information which must be stored with Vehicle. Vehicle is reponsible to
+    /// @return Opaque parameter meta data information which must be stored with Vehicle. Vehicle is responsible to
     ///         call deleteParameterMetaData when no longer needed.
     virtual QObject* loadParameterMetaData(const QString& metaDataFile) { Q_UNUSED(metaDataFile); return NULL; }
 
@@ -192,11 +198,9 @@ public:
     /// List of supported mission commands. Empty list for all commands supported.
     virtual QList<MAV_CMD> supportedMissionCommands(void);
 
-    /// Returns the names for the mission command json override files. Empty string to specify no overrides.
-    ///     @param[out] commonJsonFilename Filename for common overrides
-    ///     @param[out] fixedWingJsonFilename Filename for fixed wing overrides
-    ///     @param[out] multiRotorJsonFilename Filename for multi rotor overrides
-    virtual void missionCommandOverrides(QString& commonJsonFilename, QString& fixedWingJsonFilename, QString& multiRotorJsonFilename) const;
+    /// Returns the name of the mission command json override file for the specified vehicle type.
+    ///     @param vehicleType Vehicle type to return file for, MAV_TYPE_GENERIC is a request for overrides for all vehicle types
+    virtual QString missionCommandOverrides(MAV_TYPE vehicleType) const;
 
     /// Returns the mapping structure which is used to map from one parameter name to another based on firmware version.
     virtual const remapParamNameMajorVersionMap_t& paramNameRemapMajorVersionMap(void) const;
@@ -209,6 +213,57 @@ public:
 
     /// @return true: X confiuration, false: Plus configuration
     virtual bool multiRotorXConfig(Vehicle* vehicle) { Q_UNUSED(vehicle); return false; }
+
+    /// Returns a newly created geofence manager for this vehicle.
+    virtual GeoFenceManager* newGeoFenceManager(Vehicle* vehicle) { return new GeoFenceManager(vehicle); }
+
+    /// Returns the parameter which holds the fence circle radius if supported.
+    virtual QString geoFenceRadiusParam(Vehicle* vehicle) { Q_UNUSED(vehicle); return QString(); }
+
+    /// Returns a newly created rally point manager for this vehicle.
+    virtual RallyPointManager* newRallyPointManager(Vehicle* vehicle) { return new RallyPointManager(vehicle); }
+
+    /// Return the resource file which contains the set of params loaded for offline editing.
+    virtual QString offlineEditingParamFile(Vehicle* vehicle) { Q_UNUSED(vehicle); return QString(); }
+
+    /// Return the resource file which contains the brand image for the vehicle.
+    virtual QString brandImage(const Vehicle* vehicle) const { Q_UNUSED(vehicle) return QString(); }
+
+    // FIXME: Hack workaround for non pluginize FollowMe support
+    static const char* px4FollowMeFlightMode;
+};
+
+class FirmwarePluginFactory : public QObject
+{
+    Q_OBJECT
+
+public:
+    FirmwarePluginFactory(void);
+
+    /// Returns appropriate plugin for autopilot type.
+    ///     @param autopilotType Type of autopilot to return plugin for.
+    ///     @param vehicleType Vehicle type of autopilot to return plugin for.
+    /// @return Singleton FirmwarePlugin instance for the specified MAV_AUTOPILOT.
+    virtual FirmwarePlugin* firmwarePluginForAutopilot(MAV_AUTOPILOT autopilotType, MAV_TYPE vehicleType) = 0;
+
+    /// @return List of autopilot types this plugin supports.
+    virtual QList<MAV_AUTOPILOT> knownFirmwareTypes(void) const = 0;
+};
+
+class FirmwarePluginFactoryRegister : public QObject
+{
+    Q_OBJECT
+
+public:
+    static FirmwarePluginFactoryRegister* instance(void);
+
+    /// Registers the specified logging category to the system.
+    void registerPluginFactory(FirmwarePluginFactory* pluginFactory) { _factoryList.append(pluginFactory); }
+
+    QList<FirmwarePluginFactory*> pluginFactories(void) const { return _factoryList; }
+
+private:
+    QList<FirmwarePluginFactory*> _factoryList;
 };
 
 #endif

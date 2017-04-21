@@ -31,7 +31,6 @@ class MissionManager : public QObject
     Q_OBJECT
     
 public:
-    /// @param uas Uas which this set of facts is associated with
     MissionManager(Vehicle* vehicle);
     ~MissionManager();
     
@@ -63,7 +62,7 @@ public:
     } ErrorCode_t;
 
     // These values are public so the unit test can set appropriate signal wait times
-    static const int _ackTimeoutMilliseconds= 2000;
+    static const int _ackTimeoutMilliseconds = 1000;
     static const int _maxRetryCount = 5;
     
 signals:
@@ -82,11 +81,11 @@ private:
         AckMissionCount,    ///< MISSION_COUNT message expected
         AckMissionItem,     ///< MISSION_ITEM expected
         AckMissionRequest,  ///< MISSION_REQUEST is expected, or MISSION_ACK to end sequence
-        AckGuidedItem,      ///< MISSION_ACK expected in reponse to ArduPilot guided mode single item send
+        AckGuidedItem,      ///< MISSION_ACK expected in response to ArduPilot guided mode single item send
     } AckType_t;
     
     void _startAckTimeout(AckType_t ack);
-    bool _stopAckTimeout(AckType_t expectedAck);
+    bool _checkForExpectedAck(AckType_t receivedAck);
     void _readTransactionComplete(void);
     void _handleMissionCount(const mavlink_message_t& message);
     void _handleMissionItem(const mavlink_message_t& message);
@@ -99,14 +98,16 @@ private:
     QString _ackTypeToString(AckType_t ackType);
     QString _missionResultToString(MAV_MISSION_RESULT result);
     void _finishTransaction(bool success);
+    void _requestList(void);
+    void _writeMissionCount(void);
 
 private:
     Vehicle*            _vehicle;
     LinkInterface*      _dedicatedLink;
     
     QTimer*             _ackTimeoutTimer;
-    AckType_t           _retryAck;
-    int                 _requestItemRetryCount;
+    AckType_t           _expectedAck;
+    int                 _retryCount;
     
     bool        _readTransactionInProgress;
     bool        _writeTransactionInProgress;

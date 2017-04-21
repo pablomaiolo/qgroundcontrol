@@ -15,9 +15,9 @@
 #include "APMAirframeComponentAirframes.h"
 #include "QGCMAVLink.h"
 #include "MultiVehicleManager.h"
-#include "AutoPilotPluginManager.h"
 #include "QGCApplication.h"
 #include "QGCFileDownload.h"
+#include "ParameterManager.h"
 
 #include <QVariant>
 #include <QQmlProperty>
@@ -39,8 +39,11 @@ APMAirframeComponentController::APMAirframeComponentController(void) :
     _fillAirFrames();
 
     Fact *frame = getParameterFact(FactSystem::defaultComponentId, QStringLiteral("FRAME"));
-    connect(frame, &Fact::vehicleUpdated, this, &APMAirframeComponentController::_factFrameChanged);
-    _factFrameChanged(frame->rawValue());
+    if (frame) {
+        // Not available in newer firmwares, requires newer QGC to run correctly
+        connect(frame, &Fact::vehicleUpdated, this, &APMAirframeComponentController::_factFrameChanged);
+        _factFrameChanged(frame->rawValue());
+    }
 }
 
 APMAirframeComponentController::~APMAirframeComponentController()
@@ -107,7 +110,7 @@ void APMAirframeComponentController::_loadParametersFromDownloadFile(const QStri
         }
     }
     qgcApp()->restoreOverrideCursor();
-    _autopilot->refreshAllParameters();
+    _vehicle->parameterManager()->refreshAllParameters();
 }
 
 APMAirframeType::APMAirframeType(const QString& name, const QString& imageResource, int type, QObject* parent) :
