@@ -446,14 +446,6 @@ void PX4FirmwarePlugin::_handleAutopilotVersion(Vehicle* vehicle, mavlink_messag
                     notifyUser = patchVersion < supportedPatchVersion;
                 }
             }
-                    notifyUser = true;
-                }
-                else if(minorVersion == supportedMinorVersion)
-                {
-                    if(patchVersion < supportedPatchVersion)
-                        notifyUser = true;
-                }
-            }
         } else {
             notifyUser = true;
         }

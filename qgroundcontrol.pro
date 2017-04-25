@@ -489,7 +489,6 @@ HEADERS += \
     src/uas/UASInterface.h \
     src/uas/UASMessageHandler.h \
     src/ui/toolbar/MainToolBarController.h \
-    src/PositionManager/PositionManager.h \
     src/ui/prueba/pruebacomunicacion.h
 
 DebugBuild {
@@ -652,7 +651,6 @@ SOURCES += \
     src/uas/UAS.cc \
     src/uas/UASMessageHandler.cc \
     src/ui/toolbar/MainToolBarController.cc \
-    src/PositionManager/PositionManager.cpp \
     src/ui/prueba/pruebacomunicacion.cpp
 
 DebugBuild {

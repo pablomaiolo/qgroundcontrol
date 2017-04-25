@@ -72,7 +72,7 @@ enum DockWidgetTypes {
     ONBOARD_FILES,
     INFO_VIEW,
     HIL_CONFIG,
-    ANALYZE
+    ANALYZE,
     PRUEBA_MENSAJE
 };
 
@@ -82,7 +82,7 @@ static const char *rgDockWidgetNames[] = {
     "Onboard Files",
     "Info View",
     "HIL Config",
-    "Analyze"
+    "Analyze",
     "Prueba de mensaje"
 };
 
