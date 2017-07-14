@@ -309,7 +309,8 @@ INCLUDEPATH += \
 FORMS += \
     src/ui/MainWindow.ui \
     src/QGCQmlWidgetHolder.ui \
-    src/ui/prueba/pruebacomunicacion.ui
+    src/ui/prueba/pruebacomunicacion.ui \
+    src/ui/utn_drone/utndrone.ui
 
 !MobileBuild {
 FORMS += \
@@ -339,11 +340,13 @@ HEADERS += \
     src/api/QGCCorePlugin.h \
     src/api/QGCOptions.h \
     src/api/QGCSettings.h \
+    src/ui/utn_drone/utndrone.h
 
 SOURCES += \
     src/api/QGCCorePlugin.cc \
     src/api/QGCOptions.cc \
     src/api/QGCSettings.cc \
+    src/ui/utn_drone/utndrone.cpp
 
 #
 # Unit Test specific configuration goes here (requires full debug build with all plugins)

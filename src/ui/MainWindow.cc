@@ -52,6 +52,7 @@
 #include "HILDockWidget.h"
 #include "AppMessages.h"
 #include "prueba/pruebacomunicacion.h"
+#include "utn_drone/utndrone.h"
 #endif
 
 #ifndef NO_SERIAL_LINK
@@ -73,7 +74,8 @@ enum DockWidgetTypes {
     INFO_VIEW,
     HIL_CONFIG,
     ANALYZE,
-    PRUEBA_MENSAJE
+    PRUEBA_MENSAJE,
+    UTN_DRONE
 };
 
 static const char *rgDockWidgetNames[] = {
@@ -83,7 +85,8 @@ static const char *rgDockWidgetNames[] = {
     "Info View",
     "HIL Config",
     "Analyze",
-    "Prueba de mensaje"
+    "Prueba de mensaje",
+    "UTN Drone"
 };
 
 #define ARRAY_SIZE(ARRAY) (sizeof(ARRAY) / sizeof(ARRAY[0]))
@@ -373,6 +376,9 @@ bool MainWindow::_createInnerDockWidget(const QString& widgetName)
             // Acá agregué el código para crear nuestro widget de prueba
             case PRUEBA_MENSAJE:
                 widget = new PruebaComunicacion(widgetName, action, this);
+                break;
+            case UTN_DRONE:
+                widget = new UTNDrone(widgetName, action, this);
                 break;
         }
         if(action->data().toInt() == INFO_VIEW) {
