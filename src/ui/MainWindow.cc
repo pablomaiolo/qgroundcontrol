@@ -378,7 +378,7 @@ bool MainWindow::_createInnerDockWidget(const QString& widgetName)
                 widget = new PruebaComunicacion(widgetName, action, this);
                 break;
             case UTN_DRONE:
-                widget = new UTNDrone(widgetName, action, this);
+                widget = new UTNDrone(widgetName, action, qgcApp()->toolbox()->mavlinkProtocol(), this);
                 break;
         }
         if(action->data().toInt() == INFO_VIEW) {

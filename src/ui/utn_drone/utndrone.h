@@ -3,6 +3,8 @@
 
 #include <QWidget>
 #include "QGCDockWidget.h"
+#include "MAVLinkProtocol.h"
+#include "Vehicle.h"
 
 namespace Ui {
 class UTNDrone;
@@ -13,11 +15,19 @@ class UTNDrone : public QGCDockWidget
     Q_OBJECT
 
 public:
-    explicit UTNDrone(const QString& title, QAction* action, QWidget *parent = 0);
+    explicit UTNDrone(const QString& title, QAction* action, MAVLinkProtocol* protocol, QWidget *parent = 0);
     ~UTNDrone();
+
+public slots:
+    void receiveMessage(LinkInterface* link,mavlink_message_t message);
+    void modeChanged(const QString& flightMode);
+    void testCheckboxStateChanged(int state);
+    void activeVehicleChanged(Vehicle* vehicle);
+    void activeVehicleRemoved(Vehicle* vehicle);
 
 private:
     Ui::UTNDrone *ui;
+    Vehicle *activeVehicle;
 };
 
 #endif // UTNDRONE_H
