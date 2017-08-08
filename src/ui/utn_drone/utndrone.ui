@@ -278,7 +278,7 @@
    <widget class="QCheckBox" name="chkTestMode">
     <property name="geometry">
      <rect>
-      <x>20</x>
+      <x>10</x>
       <y>30</y>
       <width>171</width>
       <height>22</height>
@@ -288,63 +288,11 @@
      <string>Modo mantenimiento</string>
     </property>
    </widget>
-   <widget class="QCheckBox" name="checkBox_2">
-    <property name="geometry">
-     <rect>
-      <x>20</x>
-      <y>80</y>
-      <width>107</width>
-      <height>22</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Motor 1</string>
-    </property>
-   </widget>
-   <widget class="QCheckBox" name="checkBox_3">
-    <property name="geometry">
-     <rect>
-      <x>20</x>
-      <y>100</y>
-      <width>107</width>
-      <height>22</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Motor 2</string>
-    </property>
-   </widget>
-   <widget class="QCheckBox" name="checkBox_4">
-    <property name="geometry">
-     <rect>
-      <x>20</x>
-      <y>120</y>
-      <width>107</width>
-      <height>22</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Motor 3</string>
-    </property>
-   </widget>
-   <widget class="QCheckBox" name="checkBox_5">
-    <property name="geometry">
-     <rect>
-      <x>20</x>
-      <y>140</y>
-      <width>107</width>
-      <height>22</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Motor 4</string>
-    </property>
-   </widget>
    <widget class="QCheckBox" name="checkBox_6">
     <property name="geometry">
      <rect>
-      <x>20</x>
-      <y>190</y>
+      <x>10</x>
+      <y>240</y>
       <width>107</width>
       <height>22</height>
      </rect>
@@ -352,6 +300,111 @@
     <property name="text">
      <string>LED</string>
     </property>
+   </widget>
+   <widget class="QGroupBox" name="groupBox_3">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>60</y>
+      <width>231</width>
+      <height>151</height>
+     </rect>
+    </property>
+    <property name="title">
+     <string>Valores PWM</string>
+    </property>
+    <widget class="QLineEdit" name="txtMotor4">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>110</y>
+       <width>113</width>
+       <height>28</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QLineEdit" name="txtMotor1">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>20</y>
+       <width>113</width>
+       <height>28</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QLineEdit" name="txtMotor3">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>80</y>
+       <width>113</width>
+       <height>28</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QPushButton" name="btnMotor2">
+     <property name="geometry">
+      <rect>
+       <x>140</x>
+       <y>50</y>
+       <width>84</width>
+       <height>28</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Motor 2</string>
+     </property>
+    </widget>
+    <widget class="QPushButton" name="btnMotor4">
+     <property name="geometry">
+      <rect>
+       <x>140</x>
+       <y>110</y>
+       <width>84</width>
+       <height>28</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Motor 4</string>
+     </property>
+    </widget>
+    <widget class="QPushButton" name="btnMotor3">
+     <property name="geometry">
+      <rect>
+       <x>140</x>
+       <y>80</y>
+       <width>84</width>
+       <height>28</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Motor 3</string>
+     </property>
+    </widget>
+    <widget class="QPushButton" name="btnMotor1">
+     <property name="geometry">
+      <rect>
+       <x>140</x>
+       <y>20</y>
+       <width>84</width>
+       <height>28</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Motor 1</string>
+     </property>
+    </widget>
+    <widget class="QLineEdit" name="txtMotor2">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>50</y>
+       <width>113</width>
+       <height>28</height>
+      </rect>
+     </property>
+    </widget>
    </widget>
   </widget>
  </widget>

@@ -24,10 +24,14 @@ public slots:
     void testCheckboxStateChanged(int state);
     void activeVehicleChanged(Vehicle* vehicle);
     void activeVehicleRemoved(Vehicle* vehicle);
+    void buttonClicked(int index);
 
 private:
     Ui::UTNDrone *ui;
     Vehicle *activeVehicle;
+
+    QVector<QWidget *> PWMLineEdits;
+    QVector<QWidget *> PWMButtons;
 };
 
 #endif // UTNDRONE_H

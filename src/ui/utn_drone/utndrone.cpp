@@ -4,6 +4,7 @@
 #include "UAS.h"
 #include "QGCApplication.h"
 #include <QMessageBox>
+#include <QSignalMapper>
 
 #include "ui_utndrone.h"
 
@@ -22,19 +23,41 @@ UTNDrone::UTNDrone(const QString& title, QAction* action, MAVLinkProtocol* proto
     ui->lblMagY->setText(QString::number(0));
     ui->lblMagZ->setText(QString::number(0));
 
-    activeVehicle = qgcApp()->toolbox()->multiVehicleManager()->activeVehicle();
+    // Validación para que el line edit acepte valores de PWM entre 0 y 1000
+    QValidator *validator = new QIntValidator(0, 1000, this);
+    ui->txtMotor1->setValidator(validator);
+    ui->txtMotor2->setValidator(validator);
+    ui->txtMotor3->setValidator(validator);
+    ui->txtMotor4->setValidator(validator);
 
-    if(activeVehicle == NULL)
+    PWMLineEdits.push_back(ui->txtMotor1);
+    PWMLineEdits.push_back(ui->txtMotor2);
+    PWMLineEdits.push_back(ui->txtMotor3);
+    PWMLineEdits.push_back(ui->txtMotor4);
+
+    PWMButtons.push_back(ui->btnMotor1);
+    PWMButtons.push_back(ui->btnMotor2);
+    PWMButtons.push_back(ui->btnMotor3);
+    PWMButtons.push_back(ui->btnMotor4);
+
+    // El mapper es para distinguir de que botón proviene la señal de clicked()
+    QSignalMapper *signalMapper = new QSignalMapper(this);
+    connect(signalMapper, SIGNAL(mapped(int)), this, SLOT(buttonClicked(int)));
+
+    for(int i = 0; i < PWMButtons.size(); i++)
     {
-        this->close();
-        return;
+        signalMapper->setMapping(PWMButtons[i], i);
+        connect((QPushButton *)PWMButtons[i], SIGNAL(clicked(bool)), signalMapper, SLOT(map()));
     }
+
+    activeVehicle = qgcApp()->toolbox()->multiVehicleManager()->activeVehicle();
+    if(activeVehicle)
+        connect(activeVehicle, &Vehicle::flightModeChanged, this, &UTNDrone::modeChanged);
 
     // Me conecto al receptor de mensajes para procesar lo que manda el dron
     connect(protocol, &MAVLinkProtocol::messageReceived, this, &UTNDrone::receiveMessage);
 
     connect(qgcApp()->toolbox()->multiVehicleManager(), &MultiVehicleManager::activeVehicleChanged, this, &UTNDrone::activeVehicleChanged);
-    connect(activeVehicle, &Vehicle::flightModeChanged, this, &UTNDrone::modeChanged);
     connect(qgcApp()->toolbox()->multiVehicleManager(), &MultiVehicleManager::vehicleRemoved, this, &UTNDrone::activeVehicleRemoved);
 
     connect(ui->chkTestMode, &QCheckBox::stateChanged, this, &UTNDrone::testCheckboxStateChanged);
@@ -45,6 +68,9 @@ void UTNDrone::receiveMessage(LinkInterface* link,mavlink_message_t message)
     mavlink_raw_imu_t rawIMU;
     mavlink_highres_imu_t highresIMU;
     Q_UNUSED(link);
+
+    if(activeVehicle == NULL)
+        return;
 
     if (message.sysid != activeVehicle->id()) {
         return;
@@ -90,9 +116,9 @@ void UTNDrone::activeVehicleChanged(Vehicle *vehicle)
     if(activeVehicle != NULL)
     {
         disconnect(activeVehicle, 0, this, 0);
-        activeVehicle = vehicle;
-        connect(activeVehicle, &Vehicle::flightModeChanged, this, &UTNDrone::modeChanged);
     }
+    activeVehicle = vehicle;
+    connect(activeVehicle, &Vehicle::flightModeChanged, this, &UTNDrone::modeChanged);
 }
 
 void UTNDrone::activeVehicleRemoved(Vehicle *vehicle)
@@ -127,22 +153,45 @@ void UTNDrone::testCheckboxStateChanged(int state)
 
     if(activeVehicle->armed())
     {
-        QMessageBox msgBox;
-        msgBox.setText("Esta opción no está disponible si el vehículo está ARMED.");
-        msgBox.exec();
+        QMessageBox::critical(this, "Error", "Esta opción no está disponible si el vehículo está ARMED.");
     }
     else
     {
         if(state == Qt::Checked)
         {
             // Paso al modo de pruebas
-            activeVehicle->sendMavCommand(MAV_COMP_ID_ALL, MAV_CMD_DO_SET_MODE, false, (float)(MAV_MODE_FLAG_TEST_ENABLED));
+            activeVehicle->sendMavCommand(MAV_COMP_ID_ALL, MAV_CMD_DO_SET_MODE, true, (float)(MAV_MODE_FLAG_TEST_ENABLED));
         }
         else if(state == Qt::Unchecked)
         {
             // Vuelvo al modo base
-            activeVehicle->sendMavCommand(MAV_COMP_ID_ALL, MAV_CMD_DO_SET_MODE, false, 0.0f);
+            activeVehicle->sendMavCommand(MAV_COMP_ID_ALL, MAV_CMD_DO_SET_MODE, true, 0.0f);
         }
+    }
+}
+
+void UTNDrone::buttonClicked(int index)
+{
+    if(activeVehicle == NULL)
+    {
+        QMessageBox::critical(this, "Error", "No hay un vehículo activo.");
+        return;
+    }
+
+    if(activeVehicle->armed())
+    {
+        QMessageBox::critical(this, "Error", "Esta opción no está disponible si el vehículo está ARMED.");
+    }
+    else
+    {
+        QLineEdit *lineEdit = (QLineEdit *)PWMLineEdits[index];
+        activeVehicle->sendMavCommand(MAV_COMP_ID_ALL,                  // Component ID
+                                      MAV_CMD_DO_MOTOR_TEST,            // Command
+                                      true,                             // Show error
+                                      (float)(index + 1),               // Motor number
+                                      (float)MOTOR_TEST_THROTTLE_PWM,   // Throttle type (PWM)
+                                      (float)(lineEdit->text().toInt()),// Throttle
+                                      0.0f);                            // Timeout
     }
 }
 
